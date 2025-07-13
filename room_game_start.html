@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>폐교 탈출</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .room {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 1;
+        }
+
+        #room1 { background-image: url('https://i.ibb.co/jkqRq5WD/image.jpg'); }
+        #room2 { background-image: url('https://i.ibb.co/j9Yn5p7H/image.jpg'); }
+        #room3 { background-image: url('https://i.ibb.co/MDHpgPbH/image.jpg'); }
+
+
+        #start-screen, #end-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            z-index: 10;
+        }
+
+        #start-screen h1, #end-screen h1 { font-size: 3em; margin-bottom: 20px; }
+
+        #start-button, #restart-button {
+            padding: 15px 30px;
+            font-size: 1.5em;
+            cursor: pointer;
+            border: 2px solid white;
+            background-color: transparent;
+            color: white;
+            border-radius: 5px;
+        }
+
+        #timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2em;
+            color: red;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            z-index: 5;
+        }
+
+        .clickable {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            cursor: pointer;
+            z-index: 2;
+            /* --- 수정된 부분: 클릭 영역 확인을 위한 테두리 --- */
+            /* 게임 완성 후 이 아래 한 줄을 지우거나 주석 처리하세요. */
+            border: 2px solid red;
+        }
+
+        /* --- 클릭 영역 위치 설정 --- */
+        /* 1번 방 */
+        #quiz1-1 { top: 40%; left: 10%; }
+        #quiz1-2 { top: 50%; left: 35%; }
+        #quiz1-3 { top: 35%; left: 30%; }
+        #quiz1-4 { top: 60%; left: 70%; }
+        #door1 { top: 45%; left: 85%; width: 150px; height: 300px; }
+
+        /* 2번 방 */
+        #quiz2-1 { top: 40%; left: 60%; }
+        #quiz2-2 { top: 10%; left: 35%; }
+        #quiz2-3 { top: 35%; left: 70%; }
+        #quiz2-4 { top: 55%; left: 80%; }
+        #door2 { top: 40%; left: 45%; width: 150px; height: 300px; }
+
+        /* 3번 방 */
+        #quiz3-1 { top: 55%; left: 60%; }
+        #quiz3-2 { top: 70%; left: 60%; }
+        #quiz3-3 { top: 60%; left: 90%; }
+        #quiz3-4 { top: 65%; left: 15%; }
+        #door3 { top: 50%; left: 45%; width: 150px; height: 300px; }
+
+        /* --- 힌트 창 (모달) 스타일 --- */
+        .modal {
+            display: none; position: fixed; z-index: 20; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: #1a1a1a; color: #f1f1f1; margin: 15% auto; padding: 30px;
+            border: 1px solid #888; width: 80%; max-width: 500px; text-align: center;
+            border-radius: 10px; position: relative;
+            box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+        }
+        .close-button {
+            color: #aaa; position: absolute; top: 10px; right: 25px;
+            font-size: 35px; font-weight: bold;
+        }
+        .close-button:hover, .close-button:focus { color: white; text-decoration: none; cursor: pointer; }
+        #hint-text { font-size: 1.3em; margin-bottom: 25px; line-height: 1.6; }
+        #hint-answer-input {
+            width: 80%; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #555;
+            background-color: #333; color: white; font-size: 1em;
+        }
+        #hint-submit-button {
+            padding: 10px 25px; font-size: 1em; cursor: pointer; border-radius: 5px; border: none;
+            background-color: #5C5C5C; color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <h1>폐교 탈출</h1>
+        <p>수업시간에 졸다가 눈을 떠보니... 학교가 폐교처럼 변해있었다.<br>
+            시계는 12시 5분전을 가리키고 있다.<br>
+            오전 5시까지 이곳을 탈출해야 한다. 그렇지 않으면 영원히 갇히게 될 것이다.</p>
+        <button id="start-button">게임 시작</button>
+    </div>
+
+    <div id="end-screen" style="display: none;">
+        <h1 id="end-title"></h1>
+        <p id="end-message"></p>
+        <button id="restart-button">다시 시작</button>
+    </div>
+
+    <div id="game-container">
+        <div id="timer">11:55</div>
+
+        <div id="hint-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-button">×</span>
+                <p id="hint-text"></p>
+                <input type="text" id="hint-answer-input" placeholder="정답을 입력하세요">
+                <button id="hint-submit-button">확인</button>
+            </div>
+        </div>
+
+        <!-- --- 수정된 부분: 오브젝트를 HTML에 직접 추가 --- -->
+        <div id="room1" class="room">
+            <div id="quiz1-1" class="clickable"></div>
+            <div id="quiz1-2" class="clickable"></div>
+            <div id="quiz1-3" class="clickable"></div>
+            <div id="quiz1-4" class="clickable"></div>
+            <div id="door1" class="clickable"></div>
+        </div>
+
+        <div id="room2" class="room">
+            <div id="quiz2-1" class="clickable"></div>
+            <div id="quiz2-2" class="clickable"></div>
+            <div id="quiz2-3" class="clickable"></div>
+            <div id="quiz2-4" class="clickable"></div>
+            <div id="door2" class="clickable"></div>
+        </div>
+
+        <div id="room3" class="room">
+            <div id="quiz3-1" class="clickable"></div>
+            <div id="quiz3-2" class="clickable"></div>
+            <div id="quiz3-3" class="clickable"></div>
+            <div id="quiz3-4" class="clickable"></div>
+            <div id="door3" class="clickable"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- 기본 게임 변수 ---
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const startScreen = document.getElementById('start-screen');
+        const endScreen = document.getElementById('end-screen');
+        const gameContainer = document.getElementById('game-container');
+        const timerDisplay = document.getElementById('timer');
+
+        // --- 힌트 창(모달) 관련 변수 ---
+        const hintModal = document.getElementById('hint-modal');
+        const hintText = document.getElementById('hint-text');
+        const hintAnswerInput = document.getElementById('hint-answer-input');
+        const hintSubmitButton = document.getElementById('hint-submit-button');
+        const closeButton = document.querySelector('.close-button');
+
+        let gameTimeInMinutes;
+        let timerInterval;
+        let currentRoom;
+        let passwordDigits;
+        let currentQuizInfo = null;
+
+        const quizzes = {
+            1: [
+                { question: "(2)학교의 개교기념일은 1987년 3월 2일이다. 개교기념일의 월과 일을 더하면?", answer: "5" },
+                { question: "(3)이 교실의 학생 수는 35명이었고, 지금은 28명만 남아있다. 사라진 학생 수는?", answer: "7" },
+                { question: "(4)칠판에 적힌 수학 문제: 5 x 6 - 22 = ?", answer: "8" },
+                { question: "(1)책상 서랍에서 발견한 쪽지: '첫 번째 소수는?'", answer: "2" }
+            ],
+            2: [
+                { question: "(4)과학실의 비커 개수는 24개, 플라스크는 18개이다. 두 개수의 최대공약수는?", answer: "6" },
+                { question: "(2)벽에 걸린 시계는 3시 15분을 가리키고 있다. 시침과 분침이 이루는 작은 각도는? (소수점 버림)", answer: "7" },
+                { question: "(1)오래된 신문 기사: '1999년, 우리 학교 축제 이름은 '별밤' 이었다.' '별밤'의 글자 수는?", answer: "2" },
+                { question: "(3)음악실의 피아노 건반은 총 개수의 5번째로 큰 약수는 무엇일까?", answer: "8" }
+            ],
+            3: [
+                { question: "(2)CLOSED의 철자 수는?", answer: "6" },
+                { question: "(1)교장 선생님의 훈화 말씀 시간은 보통 15분이었다. 15를 2진법으로 변환한 수의 각자리수의 합은?", answer: "4" },
+                { question: "(3)학교 건물의 층수는 총 4층이다. 각 층의 계단이 25개라면, 1층부터 4층까지의 총 계단 수의 각자리수의 곱의 각 자리수의 합은? (4층까지 올라가기 위해 오르는 계단)", answer: "8" },
+                { question: "(4)마지막 쪽지: '탈출을 위한 마지막 숫자는... 행운의 숫자!'", answer: "7" }
+            ]
+        };
+
+        const passwords = {
+            1: "2578",
+            2: "2786",
+            3: "4687"
+        };
+
+        // --- 수정된 부분: setupRooms 함수를 setupEventListeners로 변경 ---
+        function setupEventListeners() {
+            for (let i = 1; i <= 3; i++) {
+                for (let j = 1; j <= 4; j++) {
+                    document.getElementById(`quiz${i}-${j}`).addEventListener('click', () => showHint(i, j - 1));
+                }
+                document.getElementById(`door${i}`).addEventListener('click', () => openDoor(i));
+            }
+        }
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            endScreen.style.display = 'none';
+            gameContainer.style.display = 'block';
+            
+            document.getElementById('room1').style.display = 'block';
+            document.getElementById('room2').style.display = 'none';
+            document.getElementById('room3').style.display = 'none';
+
+            gameTimeInMinutes = 11 * 60 + 55;
+            passwordDigits = [];
+            currentRoom = 1;
+            
+            clearInterval(timerInterval);
+            startTimer();
+            updateTimerDisplay();
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                gameTimeInMinutes += 5;
+                if (gameTimeInMinutes >= 29 * 60) { // 5:00
+                    gameTimeInMinutes = 29 * 60;
+                    updateTimerDisplay();
+                    clearInterval(timerInterval);
+                    endGame(false);
+                    return;
+                }
+                updateTimerDisplay();
+            }, 10000);
+        }
+
+        function updateTimerDisplay() {
+            let hours = Math.floor(gameTimeInMinutes / 60) % 24;
+            const minutes = gameTimeInMinutes % 60;
+            timerDisplay.textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+
+        function showHint(room, quizIndex) {
+            if (room !== currentRoom) return;
+            currentQuizInfo = quizzes[room][quizIndex];
+            hintText.textContent = currentQuizInfo.question;
+            hintAnswerInput.value = '';
+            hintModal.style.display = 'block';
+            hintAnswerInput.focus();
+        }
+
+        function closeHint() {
+            hintModal.style.display = 'none';
+            currentQuizInfo = null;
+        }
+
+        function checkHintAnswer() {
+            if (!currentQuizInfo) return;
+
+            const userAnswer = hintAnswerInput.value.trim();
+            if (userAnswer && userAnswer.toLowerCase() === currentQuizInfo.answer.toLowerCase()) {
+                alert(`정답입니다! 비밀번호의 한 조각을 획득했습니다: ${currentQuizInfo.answer}`);
+                if (!passwordDigits.includes(currentQuizInfo.answer)) {
+                    passwordDigits.push(currentQuizInfo.answer);
+                }
+                closeHint();
+            } else {
+                alert("틀렸습니다. 다시 시도해보세요.");
+                hintAnswerInput.value = '';
+                hintAnswerInput.focus();
+            }
+        }
+
+        function openDoor(room) {
+            if (room !== currentRoom) return;
+            const correctPassword = passwords[room];
+            const enteredPassword = prompt(`문의 비밀번호를 입력하세요.\n현재까지 모은 숫자: ${passwordDigits.join(', ')}`);
+
+            if (enteredPassword && enteredPassword.trim() === correctPassword) {
+                alert("문이 열렸습니다!");
+                passwordDigits = [];
+                document.getElementById(`room${currentRoom}`).style.display = 'none';
+                currentRoom++;
+                if (currentRoom > 3) {
+                    endGame(true);
+                } else {
+                    document.getElementById(`room${currentRoom}`).style.display = 'block';
+                }
+            } else {
+                alert("비밀번호가 틀렸습니다.");
+            }
+        }
+
+        function endGame(isWin) {
+            clearInterval(timerInterval);
+            document.getElementById('room1').style.display = 'none';
+            document.getElementById('room2').style.display = 'none';
+            document.getElementById('room3').style.display = 'none';
+
+            endScreen.style.display = 'flex';
+            const endTitle = document.getElementById('end-title');
+            const endMessage = document.getElementById('end-message');
+            if (isWin) {
+                endTitle.textContent = "탈출 성공!";
+                endMessage.textContent = "당신은 무사히 폐교를 탈출했습니다!";
+            } else {
+                endTitle.textContent = "탈출 실패";
+                endMessage.textContent = "당신은 영원히 학교에 갇혔습니다...";
+            }
+        }
+
+        // --- 이벤트 리스너 설정 ---
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+
+        closeButton.addEventListener('click', closeHint);
+        hintSubmitButton.addEventListener('click', checkHintAnswer);
+        hintAnswerInput.addEventListener('keyup', function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                hintSubmitButton.click();
+            }
+        });
+        window.addEventListener('click', function(event) {
+            if (event.target == hintModal) {
+                closeHint();
+            }
+        });
+
+        // --- 수정된 부분: 페이지 로드 시 이벤트 리스너 설정 함수 호출 ---
+        setupEventListeners();
+
+    </script>
+</body>
+</html>
